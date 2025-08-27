@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Esthetics Auto Cashbook</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --brand:#0b3b6d;--brand-2:#1e6fd9;--bg:#f4f6f9;--card:#fff;--text:#1f2937;--muted:#6b7280;--danger:#dc3545;--shadow:0 6px 16px rgba(0,0,0,.08);--radius:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+  header{background:linear-gradient(180deg,var(--brand),#062945);color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5;box-shadow:var(--shadow)}
+  .title{font-weight:900;font-size:18px;display:flex;gap:10px;align-items:center}
+  nav button{background:transparent;border:none;color:#e5efff;font-weight:700;margin-left:12px;padding:8px 10px;border-radius:8px;cursor:pointer}
+  nav button.active,nav button:hover{background:rgba(255,255,255,.12);color:#fff}
+  .container{max-width:1200px;margin:0 auto;padding:18px}
+  .hidden{display:none}
+  .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:16px}
+  .card-title{font-weight:800;color:var(--brand);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .btn{padding:8px 12px;border:none;border-radius:10px;font-weight:700;cursor:pointer}
+  .btn-primary{background:var(--brand-2);color:#fff}
+  .btn-secondary{background:#64748b;color:#fff}
+  .btn-danger{background:var(--danger);color:#fff}
+  .btn-ghost{background:#eef2f7;color:#111}
+  .form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+  .form-group label{display:block;font-size:12px;font-weight:800;color:var(--muted);margin:4px 0;letter-spacing:.4px;text-transform:uppercase}
+  .form-group input,.form-group select{width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;background:#fff}
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  th,td{padding:10px;border-top:1px solid #eef2f7;text-align:left}
+  thead th{background:var(--brand);color:#fff;border-top:none}
+  .action-btn{background:transparent;border:none;padding:6px 8px;border-radius:8px;cursor:pointer}
+  .action-btn:hover{background:#eef6ff}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .chip{background:#f3f4f6;border-radius:999px;padding:4px 10px;font-size:12px;display:inline-flex;align-items:center;gap:8px}
+  .chip button{border:none;background:transparent;color:#ef4444;cursor:pointer}
+  footer{background:#0b3b6d;color:#fff;text-align:center;padding:10px}
+</style>
+</head>
+<body>
+<header>
+  <div class="title"><i class="fa-solid fa-car"></i> Esthetics Auto Cashbook</div>
+  <nav id="menu" class="hidden">
+    <button id="btnDashboard" onclick="showSection('dashboard')" class="active">Dashboard</button>
+    <button id="btnTransactions" onclick="showSection('transactions')">Transactions</button>
+    <button id="btnSettings" onclick="showSection('settings')">Settings</button>
+  </nav>
+</header>
+
+<div class="container">
+
+  <!-- LOGIN -->
+  <section id="loginScreen" class="card" style="max-width:480px;margin:40px auto;">
+    <div class="card-title"><i class="fa-solid fa-right-to-bracket"></i> Login</div>
+    <div class="form-row">
+      <div class="form-group"><label>Username</label><input id="loginUser" autocomplete="username"></div>
+      <div class="form-group"><label>Password</label><input id="loginPass" type="password" autocomplete="current-password"></div>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;justify-content:space-between;align-items:center;">
+      <button class="btn btn-primary" onclick="login()">Login</button>
+      <span style="font-size:12px;color:#6b7280;">Welcome to Esthetics Auto Cashbook</span>
+    </div>
+  </section>
+
+  <!-- APP -->
+  <div id="app" class="hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div>Welcome, <b id="currentUser"></b></div>
+      <button class="btn btn-secondary" onclick="logout()"><i class="fa-solid fa-arrow-right-from-bracket"></i> Logout</button>
+    </div>
+
+    <!-- DASHBOARD -->
+    <section id="dashboardSection" class="card">
+      <div class="card-title"><i class="fa-solid fa-gauge-high"></i> Dashboard</div>
+      <div id="dashboardSummary" style="display:flex;gap:12px;flex-wrap:wrap;"></div>
+      <hr>
+      <div class="card-title" style="margin-top:8px;"><i class="fa-solid fa-filter"></i> Filters & Export</div>
+      <div class="form-row">
+        <div class="form-group"><label>Start Date</label><input type="date" id="filterStart"></div>
+        <div class="form-group"><label>End Date</label><input type="date" id="filterEnd"></div>
+        <div class="form-group"><label>Category</label><select id="filterCategory"></select></div>
+        <div class="form-group"><label>Account</label><select id="filterAccount"></select></div>
+        <div class="form-group"><label>Type</label>
+          <select id="filterType">
+            <option value="">All</option>
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn btn-primary" onclick="applyFilters(true)"><i class="fa-solid fa-magnifying-glass"></i> Apply Filters</button>
+        <button class="btn btn-ghost" onclick="clearFilters()">Clear</button>
+        <button id="exportBtn" class="btn btn-secondary" onclick="exportExcel()"><i class="fa-solid fa-file-excel"></i> Export Excel</button>
+      </div>
+    </section>
+
+    <!-- TRANSACTIONS -->
+    <section id="transactionsSection" class="hidden">
+      <div class="card">
+        <div class="card-title"><i class="fa-solid fa-plus"></i> Add Transaction</div>
+        <form id="transactionForm">
+          <div class="form-row">
+            <div class="form-group"><label>Date</label><input type="date" id="date" required></div>
+            <div class="form-group"><label>Category</label><select id="category" required></select></div>
+            <div class="form-group"><label>ID / Others</label><input type="text" id="transactionId" placeholder="Optional"></div>
+            <div class="form-group"><label>Vendor Name</label><input type="text" id="vendor" placeholder="Optional"></div>
+            <div class="form-group"><label>Account By</label><select id="account" required></select></div>
+            <div class="form-group"><label>Amount (AED)</label><input type="number" id="amount" step="0.01" min="0" required></div>
+            <div class="form-group" style="grid-column:1/-1;"><label>Description</label><input type="text" id="description" placeholder="Optional"></div>
+            <div class="form-group"><label>Type</label><select id="transactionType"><option value="income">Income</option><option value="expense">Expense</option></select></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+            <button type="button" class="btn btn-ghost" onclick="resetForm()">Reset</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><i class="fa-solid fa-list"></i> Transactions</div>
+        <div style="overflow:auto;">
+          <table id="transactionsTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Category</th>
+                <th>ID</th>
+                <th>Vendor</th>
+                <th>Account</th>
+                <th>Amount (AED)</th>
+                <th>Description</th>
+                <th>Type</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div style="margin-top:6px;font-size:12px;color:#6b7280;">
+          Note: Only the creator can edit/delete their entry for 10 minutes after creation. Admins can edit/delete anytime.
+        </div>
+      </div>
+    </section>
+
+    <!-- SETTINGS (ADMIN) -->
+    <section id="settingsSection" class="hidden">
+      <div class="card">
+        <div class="card-title"><i class="fa-solid fa-gear"></i> Settings</div>
+
+        <!-- Categories -->
+        <div class="card" style="margin-top:10px;">
+          <div class="card-title"><i class="fa-solid fa-tags"></i> Categories</div>
+          <div class="form-row">
+            <div class="form-group"><label>New Category</label><input id="newCategory" placeholder="e.g. Fuel"></div>
+            <div class="form-group" style="align-self:end;"><button class="btn btn-primary" onclick="addCategory()">Add</button></div>
+          </div>
+          <div id="categoryChips" class="chips"></div>
+        </div>
+
+        <!-- Accounts -->
+        <div class="card" style="margin-top:10px;">
+          <div class="card-title"><i class="fa-solid fa-wallet"></i> Accounts</div>
+          <div class="form-row">
+            <div class="form-group"><label>New Account</label><input id="newAccount" placeholder="e.g. Cash, Bank"></div>
+            <div class="form-group" style="align-self:end;"><button class="btn btn-primary" onclick="addAccount()">Add</button></div>
+          </div>
+          <div id="accountChips" class="chips"></div>
+        </div>
+
+        <!-- Users -->
+        <div class="card" style="margin-top:10px;">
+          <div class="card-title"><i class="fa-solid fa-users-gear"></i> Users</div>
+          <div class="form-row">
+            <div class="form-group"><label>Username</label><input id="newUsername"></div>
+            <div class="form-group"><label>Password</label><input id="newPassword" type="password"></div>
+            <div class="form-group"><label>Role</label>
+              <select id="newRole"><option value="user">User</option><option value="admin">Admin</option></select>
+            </div>
+            <div class="form-group" style="align-self:end;"><button class="btn btn-primary" onclick="addUser()">Add User</button></div>
+          </div>
+          <div style="overflow:auto;margin-top:8px;">
+            <table>
+              <thead><tr><th>Username</th><th>Role</th><th>Actions</th></tr></thead>
+              <tbody id="usersTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Data -->
+        <div class="card" style="margin-top:10px;">
+          <div class="card-title"><i class="fa-solid fa-database"></i> Data Management</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Import Excel (.xlsx)</label>
+              <input type="file" id="importExcel" accept=".xlsx" />
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <button class="btn btn-danger" onclick="deleteAllTransactions()"><i class="fa-solid fa-trash"></i> Delete All Transactions</button>
+          </div>
+          <div class="muted" style="margin-top:6px;font-size:12px;color:#6b7280;">Import is admin-only and respects your current Category/Account names.</div>
+        </div>
+
+      </div>
+    </section>
+  </div>
+</div>
+
+<footer>All rights reserved BY Qasim Aziz</footer>
+
+<script>
+/* ---------- Local Storage Helper ---------- */
+const LS = {
+  get: (k, fallback) => {
+    try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+  },
+  set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
+  del: (k) => localStorage.removeItem(k)
+};
+
+/* ---------- Versioned Reset (clears old data) ---------- */
+const SCHEMA_VERSION = 3;
+const savedVer = LS.get('schemaVersion', 0);
+if (savedVer !== SCHEMA_VERSION) {
+  // clear only app keys (safe reset)
+  ['transactions','categories','accounts'].forEach(LS.del);
+  LS.set('schemaVersion', SCHEMA_VERSION);
+}
+
+/* ---------- Seed Data ---------- */
+let users = LS.get('users', [
+  { username: 'Qasim', password: '12345', role: 'admin' }
+]); // seeded once and preserved
+let currentUser = null;
+
+let categories = LS.get('categories', ['General']);
+let accounts   = LS.get('accounts', ['Cash', 'Bank']);
+let transactions = LS.get('transactions', []); // start empty
+
+let editId = null;
+
+/* ---------- Auth ---------- */
+function login() {
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value;
+  users = LS.get('users', users);
+  const found = users.find(x => x.username === u && x.password === p);
+  if (!found) { alert('Invalid credentials!'); return; }
+  currentUser = found;
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('menu').classList.remove('hidden');
+  document.getElementById('currentUser').textContent = currentUser.username;
+  document.getElementById('btnSettings').style.display = currentUser.role === 'admin' ? 'inline-block' : 'none';
+  initUI();
+}
+function logout() {
+  currentUser = null;
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('menu').classList.add('hidden');
+}
+
+/* ---------- Sections ---------- */
+function showSection(which) {
+  document.getElementById('dashboardSection').classList.add('hidden');
+  document.getElementById('transactionsSection').classList.add('hidden');
+  document.getElementById('settingsSection').classList.add('hidden');
+  ['btnDashboard','btnTransactions','btnSettings'].forEach(id=>document.getElementById(id).classList.remove('active'));
+
+  if (which === 'dashboard') { document.getElementById('dashboardSection').classList.remove('hidden'); document.getElementById('btnDashboard').classList.add('active'); }
+  if (which === 'transactions') { document.getElementById('transactionsSection').classList.remove('hidden'); document.getElementById('btnTransactions').classList.add('active'); }
+  if (which === 'settings') {
+    if (currentUser?.role !== 'admin') { alert('Settings are for admin only.'); return; }
+    document.getElementById('settingsSection').classList.remove('hidden'); document.getElementById('btnSettings').classList.add('active');
+  }
+}
+
+/* ---------- UI Init ---------- */
+function initUI() {
+  loadSettingsUI();
+  renderUsers();
+  renderTransactions();
+  updateDashboard();
+  showSection('dashboard');
+  // Prefill today's date in form
+  const d = document.getElementById('date'); if (d) d.valueAsDate = new Date();
+}
+
+/* ---------- Settings: Categories & Accounts ---------- */
+function loadSettingsUI() {
+  // Populate selects
+  const catSel = document.getElementById('category');
+  const accSel = document.getElementById('account');
+  const fCat = document.getElementById('filterCategory');
+  const fAcc = document.getElementById('filterAccount');
+
+  catSel.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('');
+  accSel.innerHTML = accounts.map(a => `<option value="${a}">${a}</option>`).join('');
+  fCat.innerHTML = `<option value="">All</option>` + categories.map(c => `<option value="${c}">${c}</option>`).join('');
+  fAcc.innerHTML = `<option value="">All</option>` + accounts.map(a => `<option value="${a}">${a}</option>`).join('');
+
+  // Chips with edit/delete
+  const catWrap = document.getElementById('categoryChips'); catWrap.innerHTML = '';
+  categories.forEach((c, i) => {
+    const el = document.createElement('span'); el.className = 'chip';
+    el.innerHTML = `${c} 
+      <button title="Edit" onclick="renameCategory(${i})"><i class="fa-solid fa-pen"></i></button>
+      <button title="Delete" onclick="removeCategory(${i})"><i class="fa-solid fa-xmark"></i></button>`;
+    catWrap.appendChild(el);
+  });
+  const accWrap = document.getElementById('accountChips'); accWrap.innerHTML = '';
+  accounts.forEach((a, i) => {
+    const el = document.createElement('span'); el.className = 'chip';
+    el.innerHTML = `${a} 
+      <button title="Edit" onclick="renameAccount(${i})"><i class="fa-solid fa-pen"></i></button>
+      <button title="Delete" onclick="removeAccount(${i})"><i class="fa-solid fa-xmark"></i></button>`;
+    accWrap.appendChild(el);
+  });
+}
+function addCategory() {
+  const val = document.getElementById('newCategory').value.trim();
+  if (!val) return;
+  if (categories.includes(val)) return alert('Category already exists');
+  categories.push(val); LS.set('categories', categories); document.getElementById('newCategory').value = '';
+  loadSettingsUI();
+}
+function renameCategory(i){
+  const cur = categories[i];
+  const nv = prompt('Rename category', cur);
+  if (!nv || nv===cur) return;
+  if (categories.includes(nv)) return alert('Category already exists');
+  // update transactions referencing it
+  transactions = transactions.map(t => t.category===cur ? {...t, category:nv} : t);
+  LS.set('transactions', transactions);
+  categories[i]=nv; LS.set('categories', categories); loadSettingsUI(); renderTransactions(); updateDashboard();
+}
+function removeCategory(i) {
+  if (!confirm('Remove this category? Existing transactions keep old name.')) return;
+  categories.splice(i,1); LS.set('categories', categories); loadSettingsUI();
+}
+function addAccount() {
+  const val = document.getElementById('newAccount').value.trim();
+  if (!val) return;
+  if (accounts.includes(val)) return alert('Account already exists');
+  accounts.push(val); LS.set('accounts', accounts); document.getElementById('newAccount').value = '';
+  loadSettingsUI(); updateDashboard();
+}
+function renameAccount(i){
+  const cur = accounts[i];
+  const nv = prompt('Rename account', cur);
+  if (!nv || nv===cur) return;
+  if (accounts.includes(nv)) return alert('Account already exists');
+  transactions = transactions.map(t => t.account===cur ? {...t, account:nv} : t);
+  LS.set('transactions', transactions);
+  accounts[i]=nv; LS.set('accounts', accounts); loadSettingsUI(); renderTransactions(); updateDashboard();
+}
+function removeAccount(i) {
+  if (!confirm('Remove this account? Existing transactions keep old name.')) return;
+  accounts.splice(i,1); LS.set('accounts', accounts); loadSettingsUI(); updateDashboard();
+}
+
+/* ---------- Settings: Users (Admin) ---------- */
+function renderUsers() {
+  const tbody = document.getElementById('usersTableBody');
+  if (!tbody) return;
+  users = LS.get('users', users);
+  tbody.innerHTML = '';
+  users.forEach((u, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${u.username}</td>
+      <td>${u.role}</td>
+      <td>
+        <button class="action-btn" title="Make Admin" onclick="makeAdmin(${i})"><i class="fa-solid fa-user-shield"></i></button>
+        <button class="action-btn" title="Make User" onclick="makeUser(${i})"><i class="fa-solid fa-user"></i></button>
+        <button class="action-btn" title="Reset Password" onclick="resetPassword(${i})"><i class="fa-solid fa-key"></i></button>
+        <button class="action-btn" title="Delete" onclick="deleteUser(${i})"><i class="fa-solid fa-trash"></i></button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+function addUser(){
+  if (currentUser?.role!=='admin') return alert('Admin only');
+  const username = document.getElementById('newUsername').value.trim();
+  const password = document.getElementById('newPassword').value;
+  const role = document.getElementById('newRole').value;
+  if (!username || !password) return alert('Enter username & password');
+  users = LS.get('users', users);
+  if (users.find(u=>u.username===username)) return alert('Username already exists');
+  users.push({username,password,role}); LS.set('users', users);
+  document.getElementById('newUsername').value=''; document.getElementById('newPassword').value=''; document.getElementById('newRole').value='user';
+  renderUsers();
+}
+function makeAdmin(i){ users = LS.get('users', users); users[i].role='admin'; LS.set('users', users); renderUsers(); }
+function makeUser(i){ users = LS.get('users', users); users[i].role='user'; LS.set('users', users); renderUsers(); }
+function resetPassword(i){
+  const p = prompt('Enter new password'); if(!p) return;
+  users = LS.get('users', users); users[i].password = p; LS.set('users', users); alert('Password updated');
+}
+function deleteUser(i){
+  users = LS.get('users', users);
+  if (users[i].username === currentUser?.username) return alert('Cannot delete the logged-in user');
+  const adminCount = users.filter(u=>u.role==='admin').length;
+  if (users[i].role==='admin' && adminCount<=1) return alert('At least one admin required');
+  if (!confirm('Delete this user?')) return;
+  users.splice(i,1); LS.set('users', users); renderUsers();
+}
+
+/* ---------- Transactions CRUD ---------- */
+document.getElementById('transactionForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const t = {
+    id: editId ?? Date.now(),
+    date: document.getElementById('date').value,
+    category: document.getElementById('category').value,
+    reference: document.getElementById('transactionId').value,
+    vendor: document.getElementById('vendor').value,
+    account: document.getElementById('account').value,
+    amount: parseFloat(document.getElementById('amount').value || '0'),
+    description: document.getElementById('description').value,
+    type: document.getElementById('transactionType').value,
+    createdBy: currentUser.username,
+    createdAt: new Date().toISOString(),
+    editedBy: null,
+    editedAt: null
+  };
+  if (!t.date) return alert('Please select a date');
+  if (isNaN(t.amount)) return alert('Enter a valid amount');
+
+  if (editId) {
+    // Preserve original creator/timestamp; update edited info
+    const prev = transactions.find(x => x.id===editId);
+    if (prev) {
+      const updated = {...t, createdBy: prev.createdBy, createdAt: prev.createdAt, editedBy: currentUser.username, editedAt: new Date().toISOString()};
+      transactions = transactions.map(x => x.id===editId ? updated : x);
+    }
+    editId = null;
+  } else {
+    transactions.push(t);
+  }
+  LS.set('transactions', transactions);
+  e.target.reset();
+  renderTransactions();
+  updateDashboard();
+  showSection('transactions');
+});
+
+function canEditOrDelete(t){
+  if (currentUser?.role === 'admin') return true;
+  const isCreator = t.createdBy === currentUser?.username;
+  const within10m = (Date.now() - new Date(t.createdAt).getTime()) <= (10*60*1000);
+  return isCreator && within10m;
+}
+
+function renderTransactions(list = transactions){
+  const tbody = document.querySelector('#transactionsTable tbody');
+  tbody.innerHTML = '';
+  list.forEach(t => {
+    const tr = document.createElement('tr');
+    const canDo = canEditOrDelete(t);
+    tr.innerHTML = `
+      <td>${formatDateDisplay(t.date)}</td>
+      <td>${t.category}</td>
+      <td>${t.reference ?? ''}</td>
+      <td>${t.vendor ?? ''}</td>
+      <td>${t.account}</td>
+      <td>${formatAED(t.amount)}</td>
+      <td>${t.description ?? ''}</td>
+      <td>${t.type}</td>
+      <td>
+        ${canDo ? `
+          <button class="action-btn" title="Edit" onclick="editTransaction(${t.id})"><i class="fa-solid fa-pen-to-square"></i></button>
+          <button class="action-btn" title="Delete" onclick="deleteTransaction(${t.id})"><i class="fa-solid fa-trash"></i></button>
+        ` : ''}
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function editTransaction(id){
+  const t = transactions.find(x => x.id===id);
+  if (!t) return;
+  if (!canEditOrDelete(t)) return alert('Edit window expired (10 minutes) or not permitted.');
+  document.getElementById('date').value = t.date;
+  document.getElementById('category').value = t.category;
+  document.getElementById('transactionId').value = t.reference ?? '';
+  document.getElementById('vendor').value = t.vendor ?? '';
+  document.getElementById('account').value = t.account;
+  document.getElementById('amount').value = t.amount;
+  document.getElementById('description').value = t.description ?? '';
+  document.getElementById('transactionType').value = t.type;
+  editId = id;
+  showSection('transactions');
+}
+function deleteTransaction(id){
+  const t = transactions.find(x=>x.id===id);
+  if (!t) return;
+  if (!canEditOrDelete(t)) return alert('Delete window expired (10 minutes) or not permitted.');
+  if (!confirm('Delete this transaction?')) return;
+  transactions = transactions.filter(x => x.id!==id);
+  LS.set('transactions', transactions);
+  renderTransactions();
+  updateDashboard();
+}
+function deleteAllTransactions(){
+  if (currentUser?.role !== 'admin') return alert('Admin only');
+  if (!transactions.length) { alert('No transactions to delete'); return; }
+  if (!confirm('Delete ALL transactions? This cannot be undone.')) return;
+  transactions = [];
+  LS.set('transactions', transactions);
+  renderTransactions();
+  updateDashboard();
+}
+function resetForm(){ document.getElementById('transactionForm').reset(); editId = null; }
+
+/* ---------- Dashboard Summary ---------- */
+function updateDashboard(){
+  const summary = {};
+  accounts.forEach(a => summary[a]=0);
+  transactions.forEach(t=>{
+    const sign = t.type==='income' ? 1 : -1;
+    if (!(t.account in summary)) summary[t.account]=0;
+    summary[t.account] += sign * (Number(t.amount)||0);
+  });
+  const wrap = document.getElementById('dashboardSummary');
+  wrap.innerHTML = '';
+  Object.keys(summary).forEach(acc=>{
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.flex = '1 1 260px';
+    card.innerHTML = `<div class="card-title"><i class="fa-solid fa-wallet"></i> ${acc}</div>
+      <div style="font-size:20px;font-weight:900;">${formatAED(summary[acc])}</div>`;
+    wrap.appendChild(card);
+  });
+  const total = Object.values(summary).reduce((a,b)=>a+b,0);
+  const totalCard = document.createElement('div');
+  totalCard.className='card';
+  totalCard.style.flex='1 1 260px'; totalCard.style.background='#0b3b6d'; totalCard.style.color='#fff';
+  totalCard.innerHTML = `<div class="card-title" style="color:#fff"><i class="fa-solid fa-calculator"></i> Overall Balance</div>
+    <div style="font-size:22px;font-weight:900;">${formatAED(total)}</div>`;
+  wrap.appendChild(totalCard);
+}
+
+/* ---------- Filters (Dashboard) ---------- */
+function applyFilters(renderToTransactionsTable=false){
+  const s = document.getElementById('filterStart').value;
+  const e = document.getElementById('filterEnd').value;
+  const c = document.getElementById('filterCategory').value;
+  const a = document.getElementById('filterAccount').value;
+  const t = document.getElementById('filterType').value;
+
+  const filtered = transactions.filter(x=>{
+    const okS = !s || x.date >= s;
+    const okE = !e || x.date <= e;
+    const okC = !c || x.category===c;
+    const okA = !a || x.account===a;
+    const okT = !t || x.type===t;
+    return okS && okE && okC && okA && okT;
+  });
+
+  // Recompute dashboard based on filtered data
+  updateDashboardFiltered(filtered);
+
+  // Optionally show filtered list in Transactions page
+  if (renderToTransactionsTable){
+    renderTransactions(filtered);
+    showSection('transactions');
+  }
+}
+function clearFilters(){
+  ['filterStart','filterEnd'].forEach(id=>document.getElementById(id).value='');
+  ['filterCategory','filterAccount','filterType'].forEach(id=>document.getElementById(id).value='');
+  updateDashboard();
+}
+function updateDashboardFiltered(list){
+  const backupTrans = transactions;
+  transactions = list;
+  updateDashboard();
+  transactions = backupTrans;
+}
+
+/* ---------- Export ---------- */
+function exportExcel(){
+  if (currentUser?.role!=='admin') { alert('Export is admin only'); return; }
+
+  const s = document.getElementById('filterStart').value;
+  const e = document.getElementById('filterEnd').value;
+  const c = document.getElementById('filterCategory').value;
+  const a = document.getElementById('filterAccount').value;
+  const t = document.getElementById('filterType').value;
+
+  const filtered = transactions.filter(x=>{
+    const okS = !s || x.date >= s;
+    const okE = !e || x.date <= e;
+    const okC = !c || x.category===c;
+    const okA = !a || x.account===a;
+    const okT = !t || x.type===t;
+    return okS && okE && okC && okA && okT;
+  });
+
+  if (!filtered.length) { alert('No transactions match the filters'); return; }
+
+  const data = filtered.map(t=>({
+    Date: formatDateDisplay(t.date),
+    Category: t.category,
+    ID: t.reference || '',
+    Vendor: t.vendor || '',
+    Account: t.account,
+    Amount: Number(t.amount || 0),
+    Description: t.description || '',
+    Type: t.type,
+    'Created By': t.createdBy || '',
+    'Created At': formatDateTime(t.createdAt),
+    'Edited By': t.editedBy || '',
+    'Edited At': t.editedAt ? formatDateTime(t.editedAt) : ''
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
+  XLSX.writeFile(wb, 'Esthetics_Auto_Cashbook_Export.xlsx');
+}
+
+/* ---------- Import (Admin only) ---------- */
+document.getElementById('importExcel').addEventListener('change', async (e)=>{
+  if (currentUser?.role!=='admin') { alert('Admin only'); e.target.value=''; return; }
+  const file = e.target.files[0]; if (!file) return;
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, {type:'array'});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+
+  // Expected headers: Date, Category, ID, Vendor, Account, Amount, Description, Type
+  const imported = [];
+  rows.forEach(r=>{
+    const iso = normalizeDate(r.Date);
+    if (!iso) return; // skip invalid date
+    imported.push({
+      id: Date.now() + Math.floor(Math.random()*100000),
+      date: iso,
+      category: String(r.Category||'').trim() || 'General',
+      reference: String(r.ID||'').trim(),
+      vendor: String(r.Vendor||'').trim(),
+      account: String(r.Account||'').trim() || 'Cash',
+      amount: Number(r.Amount||0),
+      description: String(r.Description||'').trim(),
+      type: (String(r.Type||'expense').toLowerCase()==='income') ? 'income' : 'expense',
+      createdBy: currentUser.username,
+      createdAt: new Date().toISOString(),
+      editedBy: null,
+      editedAt: null
+    });
+  });
+
+  if (!imported.length){ alert('No valid rows found'); e.target.value=''; return; }
+
+  transactions = transactions.concat(imported);
+  LS.set('transactions', transactions);
+  renderTransactions();
+  updateDashboard();
+  e.target.value = '';
+  alert('Import complete');
+});
+
+/* ---------- Helpers ---------- */
+function formatAED(n){ return new Intl.NumberFormat('en-AE',{style:'currency',currency:'AED'}).format(Number(n||0)); }
+function formatDateDisplay(iso){ try{ const d = new Date(iso); return d.toLocaleDateString(); }catch{ return iso; } }
+function formatDateTime(iso){ try{ const d = new Date(iso); return d.toLocaleString(); }catch{ return iso; } }
+function normalizeDate(val){
+  // Accepts: ISO (YYYY-MM-DD), Excel serial, or dd/mm/yyyy, dd-mm-yyyy
+  if (!val && val!==0) return null;
+  if (typeof val === 'number') {
+    // Excel serial (days since 1899-12-30)
+    const excelEpoch = new Date(Date.UTC(1899,11,30));
+    const ms = excelEpoch.getTime() + val*86400000;
+    const d = new Date(ms);
+    return d.toISOString().slice(0,10);
+  }
+  const s = String(val).trim();
+  // ISO
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // dd/mm/yyyy or dd-mm-yyyy
+  let m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m){
+    const dd = String(m[1]).padStart(2,'0');
+    const mm = String(m[2]).padStart(2,'0');
+    const yyyy = m[3];
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  // try Date parse
+  const d = new Date(s);
+  if (!isNaN(d)) return d.toISOString().slice(0,10);
+  return null;
+}
+
+/* ---------- Boot ---------- */
+function populateFilters(){
+  const fCat = document.getElementById('filterCategory');
+  const fAcc = document.getElementById('filterAccount');
+  fCat.innerHTML = `<option value="">All</option>` + categories.map(c=>`<option value="${c}">${c}</option>`).join('');
+  fAcc.innerHTML = `<option value="">All</option>` + accounts.map(a=>`<option value="${a}">${a}</option>`).join('');
+}
+function loadSelects(){
+  document.getElementById('category').innerHTML = categories.map(c=>`<option value="${c}">${c}</option>`).join('');
+  document.getElementById('account').innerHTML = accounts.map(a=>`<option value="${a}">${a}</option>`).join('');
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  // Prepare base selects for first screen (even before login)
+  loadSelects();
+  populateFilters();
+});
+</script>
+</body>
+</html>
